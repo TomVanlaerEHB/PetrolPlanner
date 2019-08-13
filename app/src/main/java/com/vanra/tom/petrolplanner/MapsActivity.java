@@ -7,12 +7,17 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.room.Room;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Geocoder;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.database.sqlite.*;
@@ -40,6 +45,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.model.PlaceLikelihood;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
@@ -54,23 +60,22 @@ import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResponse;
 import com.google.maps.model.PlacesSearchResult;
+
+
 import com.vanra.tom.petrolplanner.models.PetrolPlannerDb;
 import com.vanra.tom.petrolplanner.models.Station;
 import com.vanra.tom.petrolplanner.models.StationDao;
 
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MapsActivity extends FragmentActivity implements OnMyLocationButtonClickListener, OnMyLocationClickListener, OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMyLocationButtonClickListener, OnMyLocationClickListener, OnMapReadyCallback, InfoWindowAdapter {
 
     private GoogleMap mMap;
     private static final int REQUEST_LOCATION = 123;
@@ -97,6 +102,7 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
         pClient = Places.createClient(this);
 
         db = PetrolPlannerDb.getDb(this);
+
     }
 
     @Override
@@ -135,13 +141,16 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
                 ArrayList<Station> stations = new ArrayList<>();
                 for(PlacesSearchResult r : resp.results){
                     LatLng temp = new LatLng(r.geometry.location.lat, r.geometry.location.lng);
-                    markerMap.put(r.placeId, mMap.addMarker(new MarkerOptions()
+                    Marker tempM = mMap.addMarker(new MarkerOptions()
                             .position(temp)
-                            .title(r.name)
-                            .snippet(r.placeId)
-                    ));
+                    );
 
                     Station tempS = new Station(r.placeId, r.name, r.geometry.location.lat, r.geometry.location.lng);
+                    tempM.setTag(tempS);
+
+                    markerMap.put(r.placeId, tempM);
+
+                    mMap.setInfoWindowAdapter(new StationInfoAdapter());
 
                     stations.add(tempS);
 
@@ -156,42 +165,28 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             Log.e("GeoAPIError", "Error getting places", e);
         }
 
+        Log.i("1152", findViewById(R.id.price_table).toString());
 
-        /*String placeType = "gas_station";
+        TableLayout ll = findViewById(R.id.price_table);
 
-        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.TYPES);
 
-        FetchPlaceRequest placeRequest = FetchPlaceRequest.newInstance(placeType, fields);
-
-        pClient.fetchPlace(placeRequest);
-
-        Task<FindCurrentPlaceResponse> placeResponse= pClient.findCurrentPlace(placeRequest);
-
-        placeResponse.addOnCompleteListener(new OnCompleteListener<FindCurrentPlaceResponse>() {
-            @Override
-            public void onComplete(@NonNull Task<FindCurrentPlaceResponse> task) {
-                if (task.isSuccessful()) {
-                    FindCurrentPlaceResponse response = task.getResult();
-                    for(PlaceLikelihood pLikelihood : response.getPlaceLikelihoods()){
-                        Log.i("Place", String.format("Place '%s' has likelihood: %s",
-                                pLikelihood.getPlace().getName(),
-                                pLikelihood.getPlace().getTypes()));
-                    }
-                }
-                else {
-                    Exception exception = task.getException();
-                    if (exception instanceof ApiException) {
-                        ApiException apiException = (ApiException) exception;
-                        Log.e("PlaceError", "Place not found: " + apiException.getStatusCode());
-                    }
-                }
-            }
-        });*/
+        for(int i = 0; i < 10; i++){
+            TableRow row = new TableRow(this);
+            TableRow.LayoutParams lp = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT);
+            row.setLayoutParams(lp);
+            TextView name = new TextView(this);
+            TextView price = new TextView(this);
+            name.setText((i * 5) + "");
+            price.setText((i / 2) + "");
+            row.addView(name);
+            row.addView(price);
+            ll.addView(row,i);
+        }
     }
 
     public void updateStation(List<Station> stations){
         try {
-            db.stationDao().insertAll(stations);
+            //db.stationDao().insertAll(stations);
             Toast.makeText(this, "Stations have been updated", Toast.LENGTH_SHORT).show();
         } catch (Exception e){
             Log.e("StationUpdateError", "Something went wrong with the stations update", e);
@@ -214,5 +209,41 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
         // Return false so that we don't consume the event and the default behavior still occurs
         // (the camera animates to the user's current position).
         return false;
+    }
+
+    @Override
+    public View getInfoWindow(Marker marker) {
+        return null;
+    }
+
+    @Override
+    public View getInfoContents(Marker marker) {
+        return null;
+    }
+
+    private class StationInfoAdapter implements InfoWindowAdapter{
+        private View mStationInfoView;
+
+        public StationInfoAdapter(){
+            mStationInfoView = MapsActivity.this.getLayoutInflater().inflate(R.layout.info_window_station, null);
+        }
+
+        @Override
+        public View getInfoWindow(Marker marker) {
+            Station s = (Station)marker.getTag();
+
+            TextView nameTextView = mStationInfoView.findViewById(R.id.name_text_view);
+            nameTextView.setText(s.getName());
+
+            TextView detailsTextView = mStationInfoView.findViewById(R.id.description_text_view);
+            detailsTextView.setText(s.getLat() + " " + s.getLng());
+
+            return mStationInfoView;
+        }
+
+        @Override
+        public View getInfoContents(Marker marker) {
+            return null;
+        }
     }
 }
