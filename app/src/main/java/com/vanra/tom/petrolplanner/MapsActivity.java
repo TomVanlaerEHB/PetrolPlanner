@@ -10,6 +10,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Path;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -33,6 +34,7 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -52,10 +54,15 @@ import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
 import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
 import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.maps.DirectionsApi;
+import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.PlacesApi;
 import com.google.maps.TextSearchRequest;
+import com.google.maps.android.PolyUtil;
+import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.DistanceMatrix;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResponse;
@@ -76,6 +83,8 @@ import java.util.List;
 import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMyLocationButtonClickListener, OnMyLocationClickListener, OnMapReadyCallback, InfoWindowAdapter {
+
+    private static String gDirectionCall = "https://maps.googleapis.com/maps/api/directions/json?";
 
     private GoogleMap mMap;
     private static final int REQUEST_LOCATION = 123;
@@ -103,6 +112,7 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
 
         db = PetrolPlannerDb.getDb(this);
 
+
     }
 
     @Override
@@ -120,6 +130,8 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             System.out.println("Location permissions available, starting location");
         }
 
+
+
         mMap.setMyLocationEnabled(true);
         mMap.setOnMyLocationClickListener(this);
         mMap.setOnMyLocationButtonClickListener(this);
@@ -132,9 +144,8 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             }
         });
 
-
         GeoApiContext ctx = new GeoApiContext.Builder().apiKey(this.getString(R.string.gServerApiKey)).build();
-        TextSearchRequest req = PlacesApi.textSearchQuery(ctx, "");
+        /*TextSearchRequest req = PlacesApi.textSearchQuery(ctx, "");
         try{
             PlacesSearchResponse resp = req.type(PlaceType.GAS_STATION).await();
             if(resp.results != null && resp.results.length > 0){
@@ -163,14 +174,35 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
         } catch (Exception e){
             Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show();
             Log.e("GeoAPIError", "Error getting places", e);
+        }*/
+
+        try{
+            Distance
+
+            DirectionsResult res = DirectionsApi.getDirections(ctx, "Falconplein 16 Antwerpen", "Dreef 6 Overijse").await();
+            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].startLocation.lat, res.routes[0].legs[0].startLocation.lng)).title(res.routes[0].legs[0].startAddress));
+            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].endLocation.lat, res.routes[0].legs[0].endLocation.lng)).title(res.routes[0].legs[0].endAddress));
+            float[] result = new float[1];
+
+
+            Location.distanceBetween(res.routes[0].overviewPolyline.decodePath().get(200).lat, res.routes[0].overviewPolyline.decodePath().get(200).lng, res.routes[0].overviewPolyline.decodePath().get(202).lat, res.routes[0].overviewPolyline.decodePath().get(202).lng, result);
+
+            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(200).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(200).lng);
+            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(201).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(201).lng);
+            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(202).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(202).lng);
+
+            mMap.addPolyline(new PolylineOptions().addAll(PolyUtil.decode(res.routes[0].overviewPolyline.getEncodedPath())));
+        } catch(Exception e){
+            Log.e("DirectionAPI", "Something went wrong", e);
         }
 
-        Log.i("1152", findViewById(R.id.price_table).toString());
 
-        TableLayout ll = findViewById(R.id.price_table);
+        //Log.i("1152", findViewById(R.id.price_table).toString());
+
+        //TableLayout ll = findViewById(R.id.price_table);
 
 
-        for(int i = 0; i < 10; i++){
+        /*for(int i = 0; i < 10; i++){
             TableRow row = new TableRow(this);
             TableRow.LayoutParams lp = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT);
             row.setLayoutParams(lp);
@@ -181,7 +213,7 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             row.addView(name);
             row.addView(price);
             ll.addView(row,i);
-        }
+        }*/
     }
 
     public void updateStation(List<Station> stations){

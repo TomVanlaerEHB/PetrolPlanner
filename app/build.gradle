@@ -17,8 +17,8 @@ android {
         }
     }
     compileOptions{
-        sourceCompatibility 1.8
-        targetCompatibility 1.8
+        sourceCompatibility '1.8'
+        targetCompatibility '1.8'
     }
 }
 
@@ -30,6 +30,7 @@ dependencies {
     implementation 'com.google.android.libraries.places:places:2.0.0'
     implementation 'com.google.maps:google-maps-services:0.9.4'
     implementation 'org.slf4j:slf4j-simple:1.7.25'
+    implementation 'com.google.maps.android:android-maps-utils:0.5'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'
