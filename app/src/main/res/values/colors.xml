@@ -6,4 +6,5 @@
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
     <color name="gray">#FF555555</color>
+    <color name="polyBlue">#0077FF</color>
 </resources>

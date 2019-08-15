@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PetrolPlanner</string>
+    <string name="calculateButton">Bereken</string>
+    <string name="destination">Bestemming</string>
+    <string name="diesel">Diesel</string>
+    <string name="f95">95</string>
+    <string name="f98">98</string>
+    <string name="lpg">LPG</string>
+    <string name="origin">Begin</string>
+    <string name="title_activity_maps">Kaart</string>
+    <string name="title_activity_menu">Menu</string>
+</resources>

@@ -1,10 +1,14 @@
 <resources>
     <string name="app_name">PetrolPlanner</string>
     <string name="title_activity_maps">Map</string>
-    <string name="gApiKey">AIzaSyCJp-FeyoVEY6Yb6nL1umISMwUhXKXhXMQ</string>
-    <string name="gServerApiKey">AIzaSyD4pax1j5TfGpDdiEkect-ibI_l-rqC71w</string>
+    <string name="title_activity_menu">Menu</string>
+    <string name="gApiKey" translatable="false">AIzaSyCJp-FeyoVEY6Yb6nL1umISMwUhXKXhXMQ</string>
+    <string name="gServerApiKey" translatable="false">AIzaSyD4pax1j5TfGpDdiEkect-ibI_l-rqC71w</string>
     <string name="diesel">Diesel</string>
     <string name="f95">95</string>
     <string name="f98">98</string>
     <string name="lpg">LPG</string>
+    <string name="origin">Origin</string>
+    <string name="destination">Destination</string>
+    <string name="calculateButton">Calculate</string>
 </resources>

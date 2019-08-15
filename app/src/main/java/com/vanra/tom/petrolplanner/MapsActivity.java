@@ -9,6 +9,7 @@ import androidx.room.Room;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Path;
 import android.location.Geocoder;
@@ -32,6 +33,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -92,6 +94,7 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
     private PlacesClient pClient;
     private Map<String, Marker> markerMap;
     private PetrolPlannerDb db;
+    private Place origin, destination;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +102,11 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
         setContentView(R.layout.activity_maps);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
+        origin = (Place)extras.get("origin");
+        destination = (Place)extras.get("destination");
 
         markerMap = new HashMap<String, Marker>();
 
@@ -177,21 +185,22 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
         }*/
 
         try{
-            Distance
+            //Distance
 
-            DirectionsResult res = DirectionsApi.getDirections(ctx, "Falconplein 16 Antwerpen", "Dreef 6 Overijse").await();
-            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].startLocation.lat, res.routes[0].legs[0].startLocation.lng)).title(res.routes[0].legs[0].startAddress));
-            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].endLocation.lat, res.routes[0].legs[0].endLocation.lng)).title(res.routes[0].legs[0].endAddress));
+            DirectionsResult res = DirectionsApi.getDirections(ctx, origin.getAddress(), destination.getAddress()).await();
+            /*mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].startLocation.lat, res.routes[0].legs[0].startLocation.lng)).title(res.routes[0].legs[0].startAddress));
+            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].endLocation.lat, res.routes[0].legs[0].endLocation.lng)).title(res.routes[0].legs[0].endAddress));*/
             float[] result = new float[1];
 
-
-            Location.distanceBetween(res.routes[0].overviewPolyline.decodePath().get(200).lat, res.routes[0].overviewPolyline.decodePath().get(200).lng, res.routes[0].overviewPolyline.decodePath().get(202).lat, res.routes[0].overviewPolyline.decodePath().get(202).lng, result);
-
-            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(200).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(200).lng);
+            /*Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(200).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(200).lng);
             Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(201).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(201).lng);
-            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(202).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(202).lng);
+            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(202).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(202).lng);*/
 
-            mMap.addPolyline(new PolylineOptions().addAll(PolyUtil.decode(res.routes[0].overviewPolyline.getEncodedPath())));
+            mMap.addPolyline(new PolylineOptions().addAll(PolyUtil.decode(res.routes[0].overviewPolyline.getEncodedPath())).color(R.color.polyBlue).width(15.0f));
+
+
+            LatLngBounds directions = new LatLngBounds(origin.getLatLng(), destination.getLatLng());
+            mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(directions, 0));
         } catch(Exception e){
             Log.e("DirectionAPI", "Something went wrong", e);
         }
@@ -226,8 +235,8 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
     }
 
     public void moveCamera(Location location){
-        LatLng tempLoc = new LatLng(location.getLatitude(), location.getLongitude());
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(tempLoc, 15));
+        /*LatLng tempLoc = new LatLng(location.getLatitude(), location.getLongitude());
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(tempLoc, 15));*/
     }
 
     @Override
