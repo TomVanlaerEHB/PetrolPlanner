@@ -1,6 +1,9 @@
 package com.vanra.tom.petrolplanner;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -11,6 +14,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Path;
 import android.location.Geocoder;
 import android.location.Location;
@@ -33,10 +37,13 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -63,7 +70,9 @@ import com.google.maps.GeocodingApi;
 import com.google.maps.PlacesApi;
 import com.google.maps.TextSearchRequest;
 import com.google.maps.android.PolyUtil;
+import com.google.maps.model.Bounds;
 import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.DirectionsRoute;
 import com.google.maps.model.DistanceMatrix;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.PlaceType;
@@ -84,7 +93,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MapsActivity extends FragmentActivity implements OnMyLocationButtonClickListener, OnMyLocationClickListener, OnMapReadyCallback, InfoWindowAdapter {
+public class MapsActivity extends AppCompatActivity implements OnMyLocationButtonClickListener, OnMyLocationClickListener, OnMapReadyCallback, InfoWindowAdapter {
 
     private static String gDirectionCall = "https://maps.googleapis.com/maps/api/directions/json?";
 
@@ -95,11 +104,24 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
     private Map<String, Marker> markerMap;
     private PetrolPlannerDb db;
     private Place origin, destination;
+    private GeoApiContext geoCtx;
+    private Polyline directionLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+        Toolbar tb = findViewById(R.id.toolbar);
+        setSupportActionBar(tb);
+
+        ActionBar ab = getSupportActionBar();
+
+        ab.setDisplayHomeAsUpEnabled(true);
+
+        tb.setTitle(R.string.title_activity_maps);
+
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
@@ -120,17 +142,12 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
 
         db = PetrolPlannerDb.getDb(this);
 
-
+        geoCtx = new GeoApiContext.Builder().apiKey(this.getString(R.string.gServerApiKey)).build();
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        LatLng currLoc;
-        //LatLng home = new LatLng(50.842239, 4.3206193);
-        //mMap.addMarker(new MarkerOptions().position(home).title("Erasmus Hogeschool Brussel"));
-
-        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(home, 14));
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
@@ -138,21 +155,18 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             System.out.println("Location permissions available, starting location");
         }
 
-
-
         mMap.setMyLocationEnabled(true);
         mMap.setOnMyLocationClickListener(this);
         mMap.setOnMyLocationButtonClickListener(this);
 
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+        /*fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if(location != null) {
                 moveCamera(location);
             } else {
                 Toast.makeText(MapsActivity.this, "Location is null", Toast.LENGTH_SHORT).show();
             }
-        });
+        });*/
 
-        GeoApiContext ctx = new GeoApiContext.Builder().apiKey(this.getString(R.string.gServerApiKey)).build();
         /*TextSearchRequest req = PlacesApi.textSearchQuery(ctx, "");
         try{
             PlacesSearchResponse resp = req.type(PlaceType.GAS_STATION).await();
@@ -184,25 +198,27 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             Log.e("GeoAPIError", "Error getting places", e);
         }*/
 
-        try{
-            //Distance
+        DirectionsResult dRes = getDirections(origin, destination);
 
-            DirectionsResult res = DirectionsApi.getDirections(ctx, origin.getAddress(), destination.getAddress()).await();
-            /*mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].startLocation.lat, res.routes[0].legs[0].startLocation.lng)).title(res.routes[0].legs[0].startAddress));
-            mMap.addMarker(new MarkerOptions().position(new LatLng(res.routes[0].legs[0].endLocation.lat, res.routes[0].legs[0].endLocation.lng)).title(res.routes[0].legs[0].endAddress));*/
-            float[] result = new float[1];
+        if(dRes != null) {
+            directionLine = mMap.addPolyline(generatePolyline(dRes.routes[0]));
 
-            /*Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(200).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(200).lng);
-            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(201).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(201).lng);
-            Log.i("RouteDetails",res.routes[0].overviewPolyline.decodePath().get(202).lat + ", " + res.routes[0].overviewPolyline.decodePath().get(202).lng);*/
+            LatLngBounds.Builder boundsBuilder = LatLngBounds.builder();
 
-            mMap.addPolyline(new PolylineOptions().addAll(PolyUtil.decode(res.routes[0].overviewPolyline.getEncodedPath())).color(R.color.polyBlue).width(15.0f));
+            for(LatLng ll : directionLine.getPoints()){
+                boundsBuilder.include(ll);
+            }
 
+            LatLngBounds bounds = boundsBuilder.build();
 
-            LatLngBounds directions = new LatLngBounds(origin.getLatLng(), destination.getLatLng());
-            mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(directions, 0));
-        } catch(Exception e){
-            Log.e("DirectionAPI", "Something went wrong", e);
+            try{
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+//                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+            } catch (Exception e){
+                Log.e("CameraAnimateError", "The camera screwed up", e);
+            }
+
+            addPolyMarkers(directionLine);
         }
 
 
@@ -224,6 +240,41 @@ public class MapsActivity extends FragmentActivity implements OnMyLocationButton
             ll.addView(row,i);
         }*/
     }
+
+    public DirectionsResult getDirections(Place origin, Place destination){
+        DirectionsResult res;
+        try {
+            res = DirectionsApi.getDirections(geoCtx, origin.getAddress(), destination.getAddress()).await();
+
+            return res;
+        } catch (Exception e) {
+            Log.e("DirectionAPI", "Something went wrong", e);
+        }
+        return null;
+    }
+
+    public PolylineOptions generatePolyline(DirectionsRoute r) {
+        PolylineOptions polyOptions;
+        try {
+            polyOptions = new PolylineOptions().addAll(PolyUtil.decode(r.overviewPolyline.getEncodedPath()))
+                    .startCap(new RoundCap())
+                    .endCap(new RoundCap())
+                    .color(Color.BLUE)
+                    .width(15.0f);
+
+            return polyOptions;
+        } catch (Exception e) {
+            Log.e("PolylineGeneration", "Something went wrong", e);
+        }
+        return null;
+    }
+
+    public void addPolyMarkers(Polyline pLine){
+        mMap.addMarker(new MarkerOptions().position(new LatLng(pLine.getPoints().get(0).latitude, pLine.getPoints().get(0).longitude)).title(origin != null ? origin.getName() : getString(R.string.origin)).snippet(origin != null ? origin.getAddress() : getString(R.string.origin)));
+        mMap.addMarker(new MarkerOptions().position(new LatLng(pLine.getPoints().get(pLine.getPoints().size()-1).latitude, pLine.getPoints().get(pLine.getPoints().size()-1).longitude)).title(destination != null ? destination.getName() : getString(R.string.destination)).snippet(destination != null ? destination.getAddress() : getString(R.string.destination)));
+    }
+
+
 
     public void updateStation(List<Station> stations){
         try {

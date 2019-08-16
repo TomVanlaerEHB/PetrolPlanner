@@ -13,6 +13,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -32,7 +34,7 @@ import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import java.util.Arrays;
 import java.util.List;
 
-public class MenuActivity extends FragmentActivity {
+public class MenuActivity extends AppCompatActivity {
     private PlacesClient pClient;
     private int AUTOCOMPLETE_REQUEST_CODE = 1;
     private static final int REQUEST_LOCATION = 123;
@@ -45,6 +47,11 @@ public class MenuActivity extends FragmentActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
+
+        Toolbar tb = findViewById(R.id.toolbar);
+        setSupportActionBar(tb);
+        tb.setTitle(R.string.title_activity_menu);
+
         if(!Places.isInitialized()){
             String gApiKey = this.getString(R.string.gApiKey);
             Places.initialize(this, gApiKey);
